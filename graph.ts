@@ -61,6 +61,11 @@ export async function searchEmail(
   }));
 }
 
+export async function listFolders(accessToken: string): Promise<{ id: string; displayName: string; totalItemCount: number }[]> {
+  const data = await graphFetch(accessToken, `/me/mailFolders?$top=200&$select=id,displayName,totalItemCount`);
+  return data.value ?? [];
+}
+
 export async function readEmail(accessToken: string, id: string): Promise<any> {
   const select = "id,subject,from,toRecipients,ccRecipients,receivedDateTime,body,hasAttachments";
   return graphFetch(accessToken, `/me/messages/${encodeURIComponent(id)}?$select=${select}`);

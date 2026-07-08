@@ -1,7 +1,7 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 import { deviceCodeLogin, getValidAccessToken, clearTokens } from "./auth.ts";
-import { searchEmail, readEmail, listAttachments, downloadAttachment } from "./graph.ts";
+import { searchEmail, readEmail, listAttachments, downloadAttachment, listFolders } from "./graph.ts";
 
 export default function (pi: ExtensionAPI) {
   pi.registerCommand("hotmail-login", {
@@ -44,6 +44,18 @@ export default function (pi: ExtensionAPI) {
       const token = await getValidAccessToken();
       const results = await searchEmail(token, params.query, params.top ?? 10, params.folder);
       return { content: [{ type: "text", text: JSON.stringify(results, null, 2) }], details: { results } };
+    },
+  });
+
+  pi.registerTool({
+    name: "list_folders",
+    label: "List Mail Folders",
+    description: "List mail folders and their ids, needed to search a custom folder (search_email's folder param only accepts well-known names like inbox/sentitems/archive, not custom folder names)",
+    parameters: Type.Object({}),
+    async execute(_toolCallId, _params) {
+      const token = await getValidAccessToken();
+      const folders = await listFolders(token);
+      return { content: [{ type: "text", text: JSON.stringify(folders, null, 2) }], details: { folders } };
     },
   });
 
