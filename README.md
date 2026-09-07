@@ -10,8 +10,8 @@ Microsoft/Hotmail email access for the [Pi coding agent](https://github.com/eare
 ## Tools
 
 - `search_email` — search or list recent emails (`query`, `top`, `folder`)
-- `read_email` — fetch full subject/sender/recipients/body by message id
-- `list_attachments` — list attachments on a message
+- `read_email` — fetch full subject/sender/recipients/body by ref (from `search_email`)
+- `list_attachments` — list attachments on a message by ref
 - `download_attachment` — save an attachment into `~/.pi/agent/hotmail-downloads`
 
 ## Setup
@@ -56,3 +56,4 @@ Run `/hotmail-login` in Pi, open the printed URL, and enter the device code. Tok
 
 - Attachment downloads are confined to `~/.pi/agent/hotmail-downloads` regardless of the requested path, since attachment content and file names come from arbitrary senders.
 - `search_email` defaults to the Inbox folder; pass `folder` to search Sent Items, Deleted Items, Archive, etc.
+- `search_email` hands out short refs ("1", "2", ...) instead of raw Graph message ids. Graph ids are 100+ char strings that differ only in a few trailing characters between adjacent emails, which an LLM can transpose when generating a tool call — a short ref leaves much less room for that. `read_email`/`list_attachments`/`download_attachment` accept either a ref or a raw id. `read_email` also echoes the subject/sender it actually fetched as the first line of its output, so a wrong pick is visible immediately instead of buried in the JSON.

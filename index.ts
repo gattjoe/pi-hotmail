@@ -2,8 +2,12 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 import { deviceCodeLogin, getValidAccessToken, clearTokens } from "./auth.ts";
 import { searchEmail, readEmail, listAttachments, downloadAttachment, listFolders } from "./graph.ts";
+import { createRefMap } from "./refs.mjs";
 
 export default function (pi: ExtensionAPI) {
+  // ponytail: session-scoped, not persisted — refs only need to outlive one pi session
+  const emailRefs = createRefMap();
+
   pi.registerCommand("hotmail-login", {
     description: "Sign in to your Microsoft/Hotmail account",
     handler: async (_args, ctx) => {
@@ -43,7 +47,10 @@ export default function (pi: ExtensionAPI) {
     async execute(_toolCallId, params) {
       const token = await getValidAccessToken();
       const results = await searchEmail(token, params.query, params.top ?? 10, params.folder);
-      return { content: [{ type: "text", text: JSON.stringify(results, null, 2) }], details: { results } };
+      // Swap the long opaque Graph id for a short ref before this reaches the model —
+      // see refs.mjs for why.
+      const display = results.map(({ id, ...rest }) => ({ ref: emailRefs.add(id), ...rest }));
+      return { content: [{ type: "text", text: JSON.stringify(display, null, 2) }], details: { results } };
     },
   });
 
@@ -62,23 +69,27 @@ export default function (pi: ExtensionAPI) {
   pi.registerTool({
     name: "read_email",
     label: "Read Email",
-    description: "Fetch the full subject, sender, recipients, and body of one email by id (from search_email)",
-    parameters: Type.Object({ id: Type.String({ description: "Message id from search_email" }) }),
+    description: "Fetch the full subject, sender, recipients, and body of one email by ref (from search_email)",
+    parameters: Type.Object({ id: Type.String({ description: "Message ref from search_email, e.g. \"3\" (or a raw Graph message id)" }) }),
     async execute(_toolCallId, params) {
       const token = await getValidAccessToken();
-      const message = await readEmail(token, params.id);
-      return { content: [{ type: "text", text: JSON.stringify(message, null, 2) }], details: { message } };
+      const message = await readEmail(token, emailRefs.resolve(params.id));
+      // Echo what was actually fetched as the first line, so a wrong-ref pick
+      // is visible immediately instead of buried in the JSON body.
+      const from = message.from?.emailAddress?.address ?? "unknown";
+      const header = `Read email: "${message.subject}" — from ${from} (${message.receivedDateTime})`;
+      return { content: [{ type: "text", text: `${header}\n\n${JSON.stringify(message, null, 2)}` }], details: { message } };
     },
   });
 
   pi.registerTool({
     name: "list_attachments",
     label: "List Attachments",
-    description: "List attachments on an email by id",
-    parameters: Type.Object({ id: Type.String({ description: "Message id" }) }),
+    description: "List attachments on an email by ref",
+    parameters: Type.Object({ id: Type.String({ description: "Message ref from search_email, e.g. \"3\" (or a raw Graph message id)" }) }),
     async execute(_toolCallId, params) {
       const token = await getValidAccessToken();
-      const attachments = await listAttachments(token, params.id);
+      const attachments = await listAttachments(token, emailRefs.resolve(params.id));
       return { content: [{ type: "text", text: JSON.stringify(attachments, null, 2) }], details: { attachments } };
     },
   });
@@ -88,7 +99,7 @@ export default function (pi: ExtensionAPI) {
     label: "Download Attachment",
     description: "Download one attachment from an email into the extension's downloads folder (~/.pi/agent/hotmail-downloads)",
     parameters: Type.Object({
-      messageId: Type.String({ description: "Message id" }),
+      messageId: Type.String({ description: "Message ref from search_email, e.g. \"3\" (or a raw Graph message id)" }),
       attachmentId: Type.String({ description: "Attachment id from list_attachments" }),
       destPath: Type.String({
         description: "File name (optionally with subfolders) to save the attachment as, relative to the downloads folder",
@@ -96,7 +107,7 @@ export default function (pi: ExtensionAPI) {
     }),
     async execute(_toolCallId, params) {
       const token = await getValidAccessToken();
-      const result = await downloadAttachment(token, params.messageId, params.attachmentId, params.destPath);
+      const result = await downloadAttachment(token, emailRefs.resolve(params.messageId), params.attachmentId, params.destPath);
       return {
         content: [{ type: "text", text: `Saved ${result.name} (${result.size} bytes) to ${result.path}` }],
         details: result,
