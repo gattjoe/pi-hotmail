@@ -1,5 +1,5 @@
 import assert from "node:assert";
-import { isExpired } from "../.pi/extensions/hotmail/expiry.mjs";
+import { isExpired } from "../expiry.mjs";
 
 assert.strictEqual(isExpired(Date.now() + 120_000), false, "token valid for 2 more minutes should not be expired");
 assert.strictEqual(isExpired(Date.now() + 30_000), true, "token inside the 60s refresh buffer should be treated as expired");

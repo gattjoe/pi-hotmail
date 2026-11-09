@@ -13,3 +13,12 @@ export async function netFetch(url, init, fetchImpl = fetch) {
     throw new Error(`Network error reaching ${new URL(url).host}: ${detail}.${hint}`, { cause: e });
   }
 }
+
+// A proxy/captive-portal error page is HTML, not JSON; say so instead of a bare JSON SyntaxError.
+export async function readJson(res) {
+  try {
+    return await res.json();
+  } catch {
+    throw new Error(`Unexpected non-JSON response (HTTP ${res.status}) from ${new URL(res.url).host}`);
+  }
+}

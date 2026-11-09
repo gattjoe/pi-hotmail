@@ -1,5 +1,5 @@
 import assert from "node:assert";
-import { resolveWithinDir } from "../.pi/extensions/hotmail/path-guard.mjs";
+import { resolveWithinDir } from "../path-guard.mjs";
 
 const base = "/tmp/safe-dir";
 

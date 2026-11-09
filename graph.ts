@@ -3,7 +3,8 @@ import { dirname, join } from "node:path";
 import { homedir } from "node:os";
 import { CONFIG_DIR_NAME } from "@earendil-works/pi-coding-agent";
 import { resolveWithinDir } from "./path-guard.mjs";
-import { netFetch } from "./net-fetch.mjs";
+import { netFetch, readJson } from "./net-fetch.mjs";
+import { graphUrl } from "./graph-url.mjs";
 
 const BASE = "https://graph.microsoft.com/v1.0";
 // ponytail: attachments are attacker-controlled (any sender) and destPath comes from LLM tool args, which can be
@@ -12,14 +13,14 @@ const DOWNLOAD_DIR = join(homedir(), CONFIG_DIR_NAME, "agent", "hotmail-download
 
 async function graphFetch(accessToken: string, path: string, headers: Record<string, string> = {}): Promise<any> {
   // path may be a full @odata.nextLink URL (pagination) or a path relative to BASE
-  const url = path.startsWith("http") ? path : `${BASE}${path}`;
+  const url = graphUrl(BASE, path);
   const res = await netFetch(url, {
     headers: { Authorization: `Bearer ${accessToken}`, ...headers },
   });
   if (!res.ok) {
     throw new Error(`Graph API ${res.status}: ${await res.text()}`);
   }
-  return res.json();
+  return readJson(res);
 }
 
 export interface EmailSummary {

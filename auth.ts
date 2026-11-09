@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { mkdirSync, readFileSync, writeFileSync, existsSync } from "node:fs";
 import { CONFIG_DIR_NAME } from "@earendil-works/pi-coding-agent";
 import { isExpired } from "./expiry.mjs";
-import { netFetch } from "./net-fetch.mjs";
+import { netFetch, readJson } from "./net-fetch.mjs";
 
 const TENANT = process.env.HOTMAIL_TENANT || "consumers";
 const SCOPE = "offline_access Mail.Read User.Read";
@@ -51,7 +51,7 @@ async function postForm(url: string, body: Record<string, string>): Promise<{ ok
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams(body),
   });
-  return { ok: res.ok, json: await res.json() };
+  return { ok: res.ok, json: await readJson(res) };
 }
 
 export async function deviceCodeLogin(
@@ -63,7 +63,7 @@ export async function deviceCodeLogin(
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({ client_id: clientId, scope: SCOPE }),
   });
-  const device = await startRes.json();
+  const device = await readJson(startRes);
   if (!startRes.ok) {
     throw new Error(device.error_description || device.error || "failed to start device code flow");
   }

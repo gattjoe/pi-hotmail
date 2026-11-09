@@ -1,5 +1,5 @@
 import assert from "node:assert";
-import { createRefMap } from "../.pi/extensions/hotmail/refs.mjs";
+import { createRefMap } from "../refs.mjs";
 
 const refs = createRefMap();
 
