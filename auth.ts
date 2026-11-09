@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { mkdirSync, readFileSync, writeFileSync, existsSync } from "node:fs";
 import { CONFIG_DIR_NAME } from "@earendil-works/pi-coding-agent";
 import { isExpired } from "./expiry.mjs";
+import { netFetch } from "./net-fetch.mjs";
 
 const TENANT = process.env.HOTMAIL_TENANT || "consumers";
 const SCOPE = "offline_access Mail.Read User.Read";
@@ -45,7 +46,7 @@ export function clearTokens(): void {
 }
 
 async function postForm(url: string, body: Record<string, string>): Promise<{ ok: boolean; json: any }> {
-  const res = await fetch(url, {
+  const res = await netFetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams(body),
@@ -57,7 +58,7 @@ export async function deviceCodeLogin(
   onPrompt: (userCode: string, verificationUri: string) => void,
 ): Promise<void> {
   const clientId = requireClientId();
-  const startRes = await fetch(DEVICECODE_URL(), {
+  const startRes = await netFetch(DEVICECODE_URL(), {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({ client_id: clientId, scope: SCOPE }),
